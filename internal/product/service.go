@@ -8,11 +8,13 @@ import (
 )
 
 var (
-	ErrExist = errors.New("item exist")
+	ErrExist    = errors.New("item exist")
+	ErrNotFound = errors.New("not found")
 )
 
 type Storage interface {
 	Create(ctx context.Context, p Product) error
+	Update(ctx context.Context, p Product) error
 }
 
 type Service struct {
@@ -37,6 +39,22 @@ func (s *Service) AddProduct(ctx context.Context, p Product) error {
 	return nil
 }
 
+func (s *Service) UpdateProduct(ctx context.Context, p Product) error {
+	err := s.storage.Update(ctx, p)
+	if err != nil {
+		if storage.IsErrNotFound(err) {
+			return ErrNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
 func IsErrExist(err error) bool {
 	return errors.Is(err, ErrExist)
+}
+
+func IsErrNotFound(err error) bool {
+	return errors.Is(err, ErrNotFound)
 }

@@ -31,3 +31,15 @@ func (ps *ProductStorage) Create(_ context.Context, p product.Product) error {
 	ps.products[p.SKU] = p
 	return nil
 }
+
+func (ps *ProductStorage) Update(_ context.Context, p product.Product) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	if _, exist := ps.products[p.SKU]; !exist {
+		return storage.ErrNotFound
+	}
+
+	ps.products[p.SKU] = p
+	return nil
+}

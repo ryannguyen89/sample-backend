@@ -27,7 +27,9 @@ func (api *API) Route(route gin.IRouter) {
 	g.POST("/register", api.handleUserRegister())
 	g.POST("/auth/login", api.handleUserLogin())
 
-	g.POST("/item/add", api.authorizationMiddleware(), api.handleProductAdd())
+	prdGroup := g.Group("/item", api.authorizationMiddleware())
+	prdGroup.POST("/add", api.handleProductAdd())
+	prdGroup.POST("/update", api.handleProductUpdate())
 }
 
 func (api *API) handleUserRegister() gin.HandlerFunc {
@@ -164,7 +166,59 @@ func (api *API) handleProductAdd() gin.HandlerFunc {
 	}
 }
 
+func (api *API) handleProductUpdate() gin.HandlerFunc {
+	type (
+		request struct {
+			SKU      string `form:"sku" binding:"required"`
+			Name     string `form:"name" binding:"required"`
+			Quantity uint32 `form:"quantity"`
+			Price    uint64 `form:"price" binding:"required"`
+			Unit     string `form:"unit" binding:"required"`
+			Status   uint8  `form:"status"`
+		}
+	)
+
+	return func(c *gin.Context) {
+		var (
+			r   request
+			ctx = c.Request.Context()
+		)
+
+		err := c.ShouldBind(&r)
+		if err != nil {
+			_ = c.Error(err)
+			c.JSON(http.StatusBadRequest, NewError(fmt.Sprintf("parse request: %v", err)))
+			return
+		}
+		fmt.Printf("product update: %#v\n", r)
+
+		err = api.prdSvc.UpdateProduct(ctx, product.Product{
+			SKU:      r.SKU,
+			Name:     r.Name,
+			Quantity: r.Quantity,
+			Price:    r.Price,
+			Unit:     r.Unit,
+			Status:   r.Status,
+		})
+		if err != nil {
+			_ = c.Error(err)
+			if product.IsErrNotFound(err) {
+				c.JSON(http.StatusBadRequest, NewError(err.Error()))
+				return
+			}
+			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
+			return
+		}
+
+		c.Status(http.StatusOK)
+	}
+}
+
 func (api *API) handleProductList() gin.HandlerFunc {
+	type (
+		request struct {
+		}
+	)
 	return func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	}

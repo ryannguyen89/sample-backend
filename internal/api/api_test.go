@@ -185,6 +185,47 @@ func TestAPIProductAdd(t *testing.T) {
 	})
 }
 
+func TestAPIProductUpdate(t *testing.T) {
+	pathAdd := "/api/item/add"
+	pathUpdate := "/api/item/update"
+
+	validReq := func() url.Values {
+		data := url.Values{}
+		data.Add("sku", "OBT-001")
+		data.Add("name", "OBT-Sehat01")
+		data.Add("qty", fmt.Sprintf("%v", 100))
+		data.Add("price", fmt.Sprintf("%v", 100000))
+		data.Add("unit", "Carton")
+		data.Add("status", fmt.Sprintf("%v", 1))
+
+		return data
+	}
+
+	t.Run("should return error when item not exist", func(t *testing.T) {
+		t.Parallel()
+
+		data := validReq()
+		data.Set("sku", "XBT-001")
+		api := makeAPI(t)
+		w := postForm(t, api, pathUpdate, data, bearer)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("add and update", func(t *testing.T) {
+		t.Parallel()
+
+		data := validReq()
+		api := makeAPI(t)
+		w := postForm(t, api, pathAdd, data, bearer)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		data.Set("qty", fmt.Sprintf("%v", 95))
+		w = postForm(t, api, pathUpdate, data, bearer)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+}
+
 func makeAPI(t *testing.T) http.Handler {
 	userStorage := memory.NewUserStorage()
 	err := userStorage.Create(context.Background(), user.User{
