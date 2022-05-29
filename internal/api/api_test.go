@@ -267,6 +267,50 @@ func TestAPIProductDelete(t *testing.T) {
 	})
 }
 
+func TestAPIProductList(t *testing.T) {
+	path := "/api/items"
+	pathAdd := "/api/item/add"
+
+	type (
+		item struct {
+			SKU      string `json:"sku"`
+			Name     string `json:"name"`
+			Quantity uint32 `json:"qty"`
+			Price    uint64 `json:"price"`
+			Unit     string `json:"unit"`
+			Status   uint8  `json:"status"`
+		}
+		response struct {
+			Data []*item `json:"data"`
+		}
+	)
+
+	validReq := func() url.Values {
+		data := url.Values{}
+		data.Add("sku", "DBT-001")
+		data.Add("name", "DBT-Sehat01")
+		data.Add("qty", fmt.Sprintf("%v", 100))
+		data.Add("price", fmt.Sprintf("%v", 100000))
+		data.Add("unit", "Carton")
+		data.Add("status", fmt.Sprintf("%v", 1))
+
+		return data
+	}
+
+	data := validReq()
+	api := makeAPI(t)
+	w := postForm(t, api, pathAdd, data, bearer)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	w = get(t, api, path, bearer)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	resp := response{}
+	err := json.Unmarshal([]byte(w.Body.String()), &resp)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(resp.Data), 1)
+}
+
 func makeAPI(t *testing.T) http.Handler {
 	userStorage := memory.NewUserStorage()
 	err := userStorage.Create(context.Background(), user.User{

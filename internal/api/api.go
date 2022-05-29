@@ -27,10 +27,12 @@ func (api *API) Route(route gin.IRouter) {
 	g.POST("/register", api.handleUserRegister())
 	g.POST("/auth/login", api.handleUserLogin())
 
+	g.GET("/items", api.authorizationMiddleware(), api.handleProductList())
 	prdGroup := g.Group("/item", api.authorizationMiddleware())
 	prdGroup.POST("/add", api.handleProductAdd())
 	prdGroup.POST("/update", api.handleProductUpdate())
 	prdGroup.POST("/delete", api.handleProductDelete())
+	prdGroup.POST("/search", api.handleProductList())
 }
 
 func (api *API) handleUserRegister() gin.HandlerFunc {
@@ -125,7 +127,7 @@ func (api *API) handleProductAdd() gin.HandlerFunc {
 		request struct {
 			SKU      string `form:"sku" binding:"required"`
 			Name     string `form:"name" binding:"required"`
-			Quantity uint32 `form:"quantity"`
+			Quantity uint32 `form:"qty"`
 			Price    uint64 `form:"price" binding:"required"`
 			Unit     string `form:"unit" binding:"required"`
 			Status   uint8  `form:"status"`
@@ -172,7 +174,7 @@ func (api *API) handleProductUpdate() gin.HandlerFunc {
 		request struct {
 			SKU      string `form:"sku" binding:"required"`
 			Name     string `form:"name" binding:"required"`
-			Quantity uint32 `form:"quantity"`
+			Quantity uint32 `form:"qty"`
 			Price    uint64 `form:"price" binding:"required"`
 			Unit     string `form:"unit" binding:"required"`
 			Status   uint8  `form:"status"`
@@ -252,6 +254,47 @@ func (api *API) handleProductDelete() gin.HandlerFunc {
 }
 
 func (api *API) handleProductList() gin.HandlerFunc {
+	type (
+		item struct {
+			SKU      string `json:"sku"`
+			Name     string `json:"name"`
+			Quantity uint32 `json:"qty"`
+			Price    uint64 `json:"price"`
+			Unit     string `json:"unit"`
+			Status   uint8  `json:"status"`
+		}
+		response struct {
+			Data []*item `json:"data"`
+		}
+	)
+	return func(c *gin.Context) {
+		var (
+			ctx  = c.Request.Context()
+			data []*item
+		)
+
+		resp, err := api.prdSvc.ListProduct(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
+			return
+		}
+
+		for _, i := range resp {
+			data = append(data, &item{
+				SKU:      i.SKU,
+				Name:     i.Name,
+				Quantity: i.Quantity,
+				Price:    i.Price,
+				Unit:     i.Unit,
+				Status:   i.Status,
+			})
+		}
+
+		c.JSON(http.StatusOK, response{Data: data})
+	}
+}
+
+func (api *API) handleProductSearch() gin.HandlerFunc {
 	type (
 		request struct {
 		}

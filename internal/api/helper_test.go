@@ -22,3 +22,16 @@ func postForm(t *testing.T, h http.Handler, target string, data url.Values, bear
 	t.Logf("response: %s", w.Body.String())
 	return w
 }
+
+func get(t *testing.T, h http.Handler, target string, bearer string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	r := httptest.NewRequest(http.MethodGet, target, nil)
+	if len(bearer) > 0 {
+		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", bearer))
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	t.Logf("response: %s", w.Body.String())
+	return w
+}

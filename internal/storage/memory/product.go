@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"sampleBackend/internal/product"
@@ -28,6 +29,7 @@ func (ps *ProductStorage) Create(_ context.Context, p product.Product) error {
 		return storage.ErrAlreadyExist
 	}
 
+	fmt.Println(p)
 	ps.products[p.SKU] = p
 	return nil
 }
@@ -55,4 +57,17 @@ func (ps *ProductStorage) Delete(_ context.Context, sku string) error {
 	delete(ps.products, sku)
 
 	return nil
+}
+
+func (ps *ProductStorage) List(_ context.Context) ([]*product.Product, error) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	var retList []*product.Product
+	for _, p := range ps.products {
+		pTemp := p
+		retList = append(retList, &pTemp)
+	}
+
+	return retList, nil
 }

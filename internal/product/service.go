@@ -16,6 +16,7 @@ type Storage interface {
 	Create(ctx context.Context, p Product) error
 	Update(ctx context.Context, p Product) error
 	Delete(ctx context.Context, sku string) error
+	List(ctx context.Context) ([]*Product, error)
 }
 
 type Service struct {
@@ -62,6 +63,10 @@ func (s *Service) DeleteProduct(ctx context.Context, sku string) error {
 	}
 
 	return nil
+}
+
+func (s *Service) ListProduct(ctx context.Context) ([]*Product, error) {
+	return s.storage.List(ctx)
 }
 
 func IsErrExist(err error) bool {
