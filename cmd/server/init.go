@@ -23,7 +23,9 @@ func (s *Server) init() {
 		e := gin.New()
 		e.Use(func(c *gin.Context) {
 			c.Next()
-			fmt.Println(c.Errors.String())
+			if len(c.Errors) > 0 {
+				fmt.Println(c.Errors.String())
+			}
 		})
 		e.Use(gin.Recovery())
 

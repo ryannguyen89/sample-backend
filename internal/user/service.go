@@ -4,16 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 
 	"sampleBackend/internal/storage"
 )
 
 var (
-	ErrUserExist = errors.New("user exist")
+	ErrUserExist   = errors.New("user exist")
+	ErrUserInvalid = errors.New("user invalid")
+
+	secretKey = []byte("G+KbPeSh")
 )
 
 type Storage interface {
 	Create(ctx context.Context, u User) error
+	Verify(ctx context.Context, u User) error
 }
 
 type Service struct {
@@ -35,6 +42,40 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 	return nil
 }
 
+func (s *Service) Login(ctx context.Context, u User) (*Login, error) {
+	// Check user
+	err := s.storage.Verify(ctx, u)
+	if err != nil {
+		if storage.IsErrInvalidInfo(err) {
+			return nil, fmt.Errorf("verify user: %v - %w", err, ErrUserInvalid)
+		}
+		return nil, fmt.Errorf("verify user: %w", err)
+	}
+
+	// Generate token
+	t := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Audience: jwt.ClaimStrings{u.Email},
+		ExpiresAt: &jwt.NumericDate{
+			Time: t.Add(time.Hour),
+		},
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString(secretKey)
+	if err != nil {
+		return nil, fmt.Errorf("sign string: %w", err)
+	}
+
+	return &Login{
+		Token: tokenString,
+	}, nil
+}
+
 func IsErrUserExist(err error) bool {
 	return errors.Is(err, ErrUserExist)
+}
+
+func IsErrUserInvalid(err error) bool {
+	return errors.Is(err, ErrUserInvalid)
 }
