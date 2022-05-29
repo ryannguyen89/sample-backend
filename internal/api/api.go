@@ -30,12 +30,13 @@ func (api *API) Route(route gin.IRouter) {
 	prdGroup := g.Group("/item", api.authorizationMiddleware())
 	prdGroup.POST("/add", api.handleProductAdd())
 	prdGroup.POST("/update", api.handleProductUpdate())
+	prdGroup.POST("/delete", api.handleProductDelete())
 }
 
 func (api *API) handleUserRegister() gin.HandlerFunc {
 	type (
 		request struct {
-			Email    string `form:"email" binding:"required""`
+			Email    string `form:"email" binding:"required"`
 			Password string `form:"password" binding:"required"`
 		}
 	)
@@ -77,7 +78,7 @@ func (api *API) handleUserRegister() gin.HandlerFunc {
 func (api *API) handleUserLogin() gin.HandlerFunc {
 	type (
 		request struct {
-			Email    string `form:"email" binding:"required""`
+			Email    string `form:"email" binding:"required"`
 			Password string `form:"password" binding:"required"`
 		}
 		response struct {
@@ -200,6 +201,42 @@ func (api *API) handleProductUpdate() gin.HandlerFunc {
 			Unit:     r.Unit,
 			Status:   r.Status,
 		})
+		if err != nil {
+			_ = c.Error(err)
+			if product.IsErrNotFound(err) {
+				c.JSON(http.StatusBadRequest, NewError(err.Error()))
+				return
+			}
+			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
+			return
+		}
+
+		c.Status(http.StatusOK)
+	}
+}
+
+func (api *API) handleProductDelete() gin.HandlerFunc {
+	type (
+		request struct {
+			SKU string `form:"sku" binding:"required"`
+		}
+	)
+
+	return func(c *gin.Context) {
+		var (
+			r   request
+			ctx = c.Request.Context()
+		)
+
+		err := c.ShouldBind(&r)
+		if err != nil {
+			_ = c.Error(err)
+			c.JSON(http.StatusBadRequest, NewError(fmt.Sprintf("parse request: %v", err)))
+			return
+		}
+		fmt.Printf("product delete: %#v\n", r)
+
+		err = api.prdSvc.DeleteProduct(ctx, r.SKU)
 		if err != nil {
 			_ = c.Error(err)
 			if product.IsErrNotFound(err) {

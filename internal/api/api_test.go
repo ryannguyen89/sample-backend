@@ -191,8 +191,8 @@ func TestAPIProductUpdate(t *testing.T) {
 
 	validReq := func() url.Values {
 		data := url.Values{}
-		data.Add("sku", "OBT-001")
-		data.Add("name", "OBT-Sehat01")
+		data.Add("sku", "ABT-001")
+		data.Add("name", "ABT-Sehat01")
 		data.Add("qty", fmt.Sprintf("%v", 100))
 		data.Add("price", fmt.Sprintf("%v", 100000))
 		data.Add("unit", "Carton")
@@ -224,6 +224,47 @@ func TestAPIProductUpdate(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
+}
+
+func TestAPIProductDelete(t *testing.T) {
+	path := "/api/item/delete"
+	pathAdd := "/api/item/add"
+
+	validReq := func() url.Values {
+		data := url.Values{}
+		data.Add("sku", "DBT-001")
+		data.Add("name", "DBT-Sehat01")
+		data.Add("qty", fmt.Sprintf("%v", 100))
+		data.Add("price", fmt.Sprintf("%v", 100000))
+		data.Add("unit", "Carton")
+		data.Add("status", fmt.Sprintf("%v", 1))
+
+		return data
+	}
+
+	t.Run("should return error when item not exist", func(t *testing.T) {
+		t.Parallel()
+
+		data := url.Values{}
+		data.Set("sku", "XBT-001")
+		api := makeAPI(t)
+		w := postForm(t, api, path, data, bearer)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("add and update", func(t *testing.T) {
+		t.Parallel()
+
+		data := validReq()
+		api := makeAPI(t)
+		w := postForm(t, api, pathAdd, data, bearer)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		data = url.Values{}
+		data.Set("sku", "DBT-001")
+		w = postForm(t, api, path, data, bearer)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }
 
 func makeAPI(t *testing.T) http.Handler {

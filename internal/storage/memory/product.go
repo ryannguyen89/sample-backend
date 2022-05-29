@@ -43,3 +43,16 @@ func (ps *ProductStorage) Update(_ context.Context, p product.Product) error {
 	ps.products[p.SKU] = p
 	return nil
 }
+
+func (ps *ProductStorage) Delete(_ context.Context, sku string) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	if _, exist := ps.products[sku]; !exist {
+		return storage.ErrNotFound
+	}
+
+	delete(ps.products, sku)
+
+	return nil
+}
