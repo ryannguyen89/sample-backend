@@ -32,7 +32,7 @@ func (api *API) Route(route gin.IRouter) {
 	prdGroup.POST("/add", api.handleProductAdd())
 	prdGroup.POST("/update", api.handleProductUpdate())
 	prdGroup.POST("/delete", api.handleProductDelete())
-	prdGroup.POST("/search", api.handleProductList())
+	prdGroup.POST("/search", api.handleProductSearch())
 }
 
 func (api *API) handleUserRegister() gin.HandlerFunc {
@@ -206,7 +206,7 @@ func (api *API) handleProductUpdate() gin.HandlerFunc {
 		if err != nil {
 			_ = c.Error(err)
 			if product.IsErrNotFound(err) {
-				c.JSON(http.StatusBadRequest, NewError(err.Error()))
+				c.Status(http.StatusNotFound)
 				return
 			}
 			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
@@ -242,7 +242,7 @@ func (api *API) handleProductDelete() gin.HandlerFunc {
 		if err != nil {
 			_ = c.Error(err)
 			if product.IsErrNotFound(err) {
-				c.JSON(http.StatusBadRequest, NewError(err.Error()))
+				c.Status(http.StatusNotFound)
 				return
 			}
 			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
@@ -297,9 +297,49 @@ func (api *API) handleProductList() gin.HandlerFunc {
 func (api *API) handleProductSearch() gin.HandlerFunc {
 	type (
 		request struct {
+			SKU string `form:"sku" binding:"required"`
+		}
+		item struct {
+			SKU      string `json:"sku"`
+			Name     string `json:"name"`
+			Quantity uint32 `json:"qty"`
+			Price    uint64 `json:"price"`
+			Unit     string `json:"unit"`
+			Status   uint8  `json:"status"`
 		}
 	)
 	return func(c *gin.Context) {
-		c.Status(http.StatusOK)
+		var (
+			r   request
+			ctx = c.Request.Context()
+		)
+
+		err := c.ShouldBind(&r)
+		if err != nil {
+			_ = c.Error(err)
+			c.JSON(http.StatusBadRequest, NewError(fmt.Sprintf("parse request: %v", err)))
+			return
+		}
+		fmt.Printf("product search: %#v\n", r)
+
+		prd, err := api.prdSvc.SearchProduct(ctx, r.SKU)
+		if err != nil {
+			_ = c.Error(err)
+			if product.IsErrNotFound(err) {
+				c.Status(http.StatusNotFound)
+				return
+			}
+			c.JSON(http.StatusInternalServerError, NewError(err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, item{
+			SKU:      prd.SKU,
+			Name:     prd.Name,
+			Quantity: prd.Quantity,
+			Price:    prd.Price,
+			Unit:     prd.Unit,
+			Status:   prd.Status,
+		})
 	}
 }

@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"sampleBackend/internal/product"
@@ -29,9 +28,20 @@ func (ps *ProductStorage) Create(_ context.Context, p product.Product) error {
 		return storage.ErrAlreadyExist
 	}
 
-	fmt.Println(p)
 	ps.products[p.SKU] = p
 	return nil
+}
+
+func (ps *ProductStorage) Get(_ context.Context, sku string) (*product.Product, error) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	if item, exist := ps.products[sku]; exist {
+		item := item
+		return &item, nil
+	} else {
+		return nil, storage.ErrNotFound
+	}
 }
 
 func (ps *ProductStorage) Update(_ context.Context, p product.Product) error {

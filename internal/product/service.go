@@ -3,6 +3,7 @@ package product
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"sampleBackend/internal/storage"
 )
@@ -14,6 +15,7 @@ var (
 
 type Storage interface {
 	Create(ctx context.Context, p Product) error
+	Get(ctx context.Context, sku string) (*Product, error)
 	Update(ctx context.Context, p Product) error
 	Delete(ctx context.Context, sku string) error
 	List(ctx context.Context) ([]*Product, error)
@@ -67,6 +69,18 @@ func (s *Service) DeleteProduct(ctx context.Context, sku string) error {
 
 func (s *Service) ListProduct(ctx context.Context) ([]*Product, error) {
 	return s.storage.List(ctx)
+}
+
+func (s *Service) SearchProduct(ctx context.Context, sku string) (*Product, error) {
+	p, err := s.storage.Get(ctx, sku)
+	if err != nil {
+		if storage.IsErrNotFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get product: %w", err)
+	}
+
+	return p, nil
 }
 
 func IsErrExist(err error) bool {
