@@ -10,41 +10,37 @@ import (
 
 type UserStorage struct {
 	mu    sync.Mutex
-	users []user.User
+	users map[string]user.User
 }
 
 func NewUserStorage() *UserStorage {
-	return &UserStorage{}
+	return &UserStorage{
+		users: make(map[string]user.User),
+	}
 }
 
 func (us *UserStorage) Create(_ context.Context, u user.User) error {
 	us.mu.Lock()
 	defer us.mu.Unlock()
 
-	for _, i := range us.users {
-		if i.Email == u.Email {
-			return storage.ErrAlreadyExist
-		}
+	if _, exist := us.users[u.Email]; exist {
+		return storage.ErrAlreadyExist
 	}
 
-	us.users = append(us.users, u)
+	us.users[u.Email] = u
 	return nil
 }
 
-func (us *UserStorage) Verify(ctx context.Context, u user.User) (err error) {
+func (us *UserStorage) Verify(_ context.Context, u user.User) error {
 	us.mu.Lock()
 	defer us.mu.Unlock()
 
-	err = storage.ErrInvalidInfo
-
-	for _, i := range us.users {
-		if i.Email == u.Email {
-			if i.Password == u.Password {
-				err = nil
-			}
-			break
+	if item, exist := us.users[u.Email]; exist {
+		if item.Password == u.Password {
+			return nil
 		}
+		return storage.ErrInvalidInfo
+	} else {
+		return storage.ErrInvalidInfo
 	}
-
-	return
 }

@@ -56,8 +56,8 @@ func (s *Service) Login(ctx context.Context, u User) (*Login, error) {
 	t := time.Now()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Audience: jwt.ClaimStrings{u.Email},
-		ExpiresAt: &jwt.NumericDate{
-			Time: t.Add(time.Hour),
+		IssuedAt: &jwt.NumericDate{
+			Time: t,
 		},
 	})
 
@@ -70,6 +70,17 @@ func (s *Service) Login(ctx context.Context, u User) (*Login, error) {
 	return &Login{
 		Token: tokenString,
 	}, nil
+}
+
+func (s *Service) ValidateToken(_ context.Context, tokenString string) error {
+	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+	if err != nil {
+		return fmt.Errorf("parse token: %w", err)
+	}
+
+	return nil
 }
 
 func IsErrUserExist(err error) bool {

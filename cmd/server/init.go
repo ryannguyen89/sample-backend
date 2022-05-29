@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"sampleBackend/internal/api"
+	"sampleBackend/internal/product"
 	"sampleBackend/internal/storage/memory"
 	"sampleBackend/internal/user"
 )
@@ -16,7 +17,10 @@ func (s *Server) init() {
 		// Init API server
 		userStorage := memory.NewUserStorage()
 		userSvc := user.NewService(userStorage)
-		a := api.NewAPI(userSvc)
+
+		prdStorage := memory.NewProductStorage()
+		prdSvc := product.NewService(prdStorage)
+		a := api.NewAPI(userSvc, prdSvc)
 
 		gin.SetMode(gin.ReleaseMode)
 
